@@ -1,0 +1,14 @@
+### For some reason you have to use SPACES instead of TABS ###
+
+dirs: # Make file for each stic and place in the corresponding directory
+    input: './tth_scan/stic_' # script will add stic number and .txt
+    output: './tth/stic_'
+    log: './failed/stic_'
+
+root:
+    dir: './root_data.root'
+    mode: 'recreate'
+
+parameters:
+    chips: 8
+    stic_en_id: [0,1,2,3,4,5,6,7]
