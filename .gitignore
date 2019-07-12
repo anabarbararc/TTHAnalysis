@@ -1,0 +1,16 @@
+# ignore all logs
+*.log
+
+# ignore all txt
+*.txt
+
+# ignore all root
+*.root
+
+# ignore compiled source #
+*.o
+*.so
+
+# ignore yml
+*.yml
+
