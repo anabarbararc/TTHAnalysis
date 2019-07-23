@@ -87,7 +87,8 @@ int getTTH(string board)
       outfile << "ch= " << i << "\t tth= " << tthvalue << endl;
       // check for failed channels
       failed_channels = check_failed_channels(g_copy);
-      lim1.push_back(tth_array[find_maximum(freq_array,31,failed_channels)]);
+      if(failed_channels==1) lim1.push_back(1);
+      else lim1.push_back(tth_array[find_maximum(freq_array,31,failed_channels)]);
       //if (failed_channels==1){
       //  logfile << "ch= " << i << "\t Frequencies lower than 35 kHz"<< endl;
       //}
@@ -109,6 +110,16 @@ int getTTH(string board)
       if (freq_array[tthvalue]>500){
         logfile << "ch= " << i << "\t Freq(chosen_TTH) is larger than 500 kHz"<< endl;
       }
+      if (lim2.at(i)<=lim1.at(i)+4){
+        logfile << "ch= " << i << "\t Fault of method: check channel!"<< endl;
+      }
+      if (tthvalue != int((lim1.at(i)+lim2.at(i))/2)){
+        logfile << "ch= " << i << "\t Wrong tth! "<< lim1.at(i) << " " << lim2.at(i) << " " << tthvalue << endl;
+      }
+      else if( (freq_array[lim1.at(i)] > 1000 && freq_array[lim2.at(i)] < 200) || (abs(freq_array[lim1.at(i)]-freq_array[lim2.at(i)]) > 800)){
+        logfile << "ch= " << i << "\t Check channel!"<< endl;
+      }
+
 
 
     }

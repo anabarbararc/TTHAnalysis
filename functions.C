@@ -9,7 +9,7 @@ int FindTTH (TGraph *g){
   double freq[32];
   double tth[32];
 
-  int chosen_index;
+  int chosen_index=0;
 
   // tth limits to calculate average of tth
   int limit1=0;
@@ -31,29 +31,15 @@ int FindTTH (TGraph *g){
   }
 
   // set value for limit1
-  if(failed_channels==0 || failed_channels==2) limit1 = tth[find_maximum(freq,31,failed_channels)];
-  else if(failed_channels==1) limit1 = 1;
+  //if(failed_channels==0 || failed_channels==2) limit1 = tth[find_maximum(freq,31,failed_channels)];
+  if(failed_channels==1) limit1 = 1;
   else limit1 = tth[find_maximum(freq,31,failed_channels)];
 
-  // set value for limit2
-  // set value for limit2 (check if derivatives change more than 15 btw points i, i+1, i+2 and i+3)
-  TGraph *g_test = new TGraph();
-  TF1 *p1 = new TF1("p1","pol1",0,31);
-  for (int i=limit1+4;i<32-3;i++){
-    //if(i > limit1+4 && i < 28) {
-    g_test->SetPoint(0,i,freq[i]);
-    g_test->SetPoint(1,i+1,freq[i+1]);
-    g_test->SetPoint(2,i+2,freq[i+2]);
-    g_test->SetPoint(3,i+3,freq[i+3]);
-    g_test->Fit(p1,"QR+");
-    if(p1->GetParameter(1) < -1)
-      limit2 = i-1;
-  }
-
+  limit2 = FindLimit2(g);
   // if limit2 0, set value for 31
   if (limit2==0) limit2=31;
 
-  chosen_index = (limit2+limit1)/2;
+  chosen_index = int((limit2+limit1)/2);
 
   return tth[chosen_index];
 }
@@ -190,8 +176,8 @@ int FindLimit2 (TGraph *g){
   }
 
   // set value for limit1
-  if(failed_channels==0 || failed_channels==2) limit1 = tth[find_maximum(freq,31,failed_channels)];
-  else if(failed_channels==1) limit1 = 1;
+  //if(failed_channels==0 || failed_channels==2) limit1 = tth[find_maximum(freq,31,failed_channels)];
+  if(failed_channels==1) limit1 = 1;
   else limit1 = tth[find_maximum(freq,31,failed_channels)];
 
   // set value for limit2
@@ -199,18 +185,18 @@ int FindLimit2 (TGraph *g){
   TGraph *g_test = new TGraph();
   TF1 *p1 = new TF1("p1","pol1",0,31);
   for (int i=limit1+4;i<32-3;i++){
-    //if(i > limit1+4 && i < 28) {
     g_test->SetPoint(0,i,freq[i]);
     g_test->SetPoint(1,i+1,freq[i+1]);
     g_test->SetPoint(2,i+2,freq[i+2]);
     g_test->SetPoint(3,i+3,freq[i+3]);
     g_test->Fit(p1,"QR+");
-    if(p1->GetParameter(1) < -1)
+    if(p1->GetParameter(1) < -2)
       limit2 = i-1;
   }
 
   // if limit2 still 0, set value for 31
-  if (limit2==0) limit2=31;
+  if (limit2==0 || limit2<=(limit1+4)) limit2=31;
+
   //cout << limit1 << "\t" << limit2 << endl;
   return limit2;
 }
