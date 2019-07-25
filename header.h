@@ -14,19 +14,28 @@
 using namespace std;
 
 // Find TTH fucntion
-int FindTTH (TGraph *g);
+int FindTTH (double arr[], int lim1, int lim2);
 
 // Function to find maximum within the frequency range
 int find_maximum(double arr[], int n, int failed_channels);
 
 // check for failed channels
-int check_failed_channels(TGraph *g);
+int check_failed_channels(double arr[]);
 
 // check if more than 15 channels have High Frequency (>500kHz)
 bool check_highfreq(TGraph *g);
 
+// find limit on the left edge
+int FindLimit1(double arr[], double arr1[], int n, int failed_channels);
+
 // find limit on the right edge
-int FindLimit2 (TGraph *g);
+int FindLimit2 (double arr[], int lim1);
 
 // get TTH function
 int getTTH(string board);
+
+// find limit on the left edge
+int FindLimit1_low (double arr[]);
+
+// find limit on the right edge
+int FindLimit2_low (double arr[]);

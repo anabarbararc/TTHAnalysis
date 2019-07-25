@@ -1,9 +1,10 @@
 #include "header.h"
 
-int getTTH(string board)
-{
+int getTTH(string board){
+
   // new path to save directly in config directory
-  string path = "/srv/nfs/rootfs/root/fpga_app/config/Board" + board;
+  //string path = "/srv/nfs/rootfs/root/fpga_app/config/Board" + board;
+  string path = "Data_TTH/daq_board_" + board;
 
   // root file with the plt freq vs tth for all channels and stic
   string rootfilename = path + "/freq_vs_tth.root";
@@ -13,30 +14,41 @@ int getTTH(string board)
   for (int stic=0; stic<8; stic++){
     cout << "Getting TTH of channels on STiC" << stic << endl;
 
-    string infilename = path + "/tth_scan/stic_" + to_string(stic) + ".txt";
+    string infilename = path + "/tth_scan_v1/stic_" + to_string(stic) + ".txt";
 
     // cmd to apply a space btw = sign and numbers in the sticx.txt files
     // this makes them readable
     string cmd = "sed -i -e 's/=/= /g' " + infilename;
-    system(cmd.c_str());
+    int systemcmd1 = system(cmd.c_str());
 
     // set input file
     ifstream file(infilename.c_str(), ios::in );
 
     // set path
     string create_tthdir = "mkdir -p " + path + "/tth";
-    string create_faileddir = "mkdir -p " + path + "/failed";
+    string create_faileddir = "mkdir -p " + path + "/tth_failed";
     
     // set output file in tth directory
-    system(create_tthdir.c_str());
+    int systemcmd2 = system(create_tthdir.c_str());
     string outfilename = path + "/tth/stic_" + to_string(stic) + ".txt";
     ofstream outfile(outfilename.c_str(), ios::out );
     
     // set log files
-    system(create_faileddir.c_str());
+    int systemcmd3 = system(create_faileddir.c_str());
     string logfilename = path + "/tth_failed/stic_" + to_string(stic) + ".log";
     ofstream logfile(logfilename.c_str(), ios::out );
 
+    // if any of the system cmds fail, error message appears
+    if(systemcmd1 == -1){
+      cout << "cmd: " << cmd << " FAILED." << endl; 
+    }
+    if(systemcmd2 == -1){
+      cout << "cmd: " << create_tthdir << " FAILED." << endl; 
+    }
+    if(systemcmd3 == -1){
+      cout << "cmd: " << create_faileddir << " FAILED." << endl; 
+
+    }
     // auxiliar parameters
     char aux1[4];
     char aux2[5];
@@ -47,6 +59,8 @@ int getTTH(string board)
 
     double data[64][32]={0};
     int tthvalue;
+    int limit1 = 0;
+    int limit2 = 0;
     vector <int>lim1;
     vector <int>lim2;
 
@@ -71,10 +85,12 @@ int getTTH(string board)
     vector<int> chosen_tth;
     double tth_array[32]={0};
     double freq_array[32]={0};
+
     // loop in the channels
     for (int i=0; i<64; i++){
-      //if (stic==0) cout << "channel = " << i << endl;
+
       failed_channels=0;
+
       for (int j=0; j<32; j++){
         g[i].SetPoint(j,j,data[i][j]);
         tth_array[j]=j;
@@ -82,47 +98,63 @@ int getTTH(string board)
       }
       g[i].Draw("ALP");
       g_copy=&g[i];
-      // get tth values
-      tthvalue = FindTTH(g_copy);
-      chosen_tth.push_back(tthvalue);
 
-      lim2.push_back(FindLimit2(g_copy));
+      //lim2.push_back(FindLimit2(g_copy));
 
       outfile << "ch= " << i << "\t tth= " << tthvalue << endl;
+
       // check for failed channels
-      failed_channels = check_failed_channels(g_copy);
-      if(failed_channels==1) lim1.push_back(1);
-      else lim1.push_back(tth_array[find_maximum(freq_array,31,failed_channels)]);
-      //if (failed_channels==1){
-      //  logfile << "ch= " << i << "\t Frequencies lower than 35 kHz"<< endl;
+      failed_channels = check_failed_channels(freq_array);
+
+      if(failed_channels==1 || failed_channels==2){
+          limit1 = FindLimit1_low(freq_array);
+          limit2 = FindLimit2_low(freq_array);
+      }
+      else{
+          limit1 = FindLimit1(freq_array,tth_array,31,failed_channels);
+          //limit1 = FindLimit1(freq_array);
+          limit2 = FindLimit2(freq_array,limit1);
+      }
+      lim1.push_back(limit1);
+      lim2.push_back(limit2);
+
+      // get tth values
+      tthvalue = FindTTH(tth_array,limit1,limit2);
+      chosen_tth.push_back(tthvalue);
+
+      //if (limit1==0){
+      //  logfile << "ch= " << i << "\t Limit left edge = 0! Check channel!"<< endl;
       //}
-      if (failed_channels==2){
-        logfile << "ch= " << i << "\t Frequencies lower than 10 kHz"<< endl;
-      }
-      if (failed_channels==3){
-        logfile << "ch= " << i << "\t Frequencies higher than 500 kHz"<< endl;
-      }
-      if (failed_channels==4){
-        logfile << "ch= " << i << "\t > 15 points with f=0kHz kHz"<< endl;
-      }
+      //if (failed_channels==1){
+      //  logfile << "ch= " << i << "\t Frequencies lower than 80 kHz"<< endl;
+      //}
+      //if (failed_channels==2){
+      //  logfile << "ch= " << i << "\t Frequencies lower than 10 kHz"<< endl;
+      //}
+      //if (failed_channels==3){
+      //  logfile << "ch= " << i << "\t Frequencies higher than 500 kHz"<< endl;
+      //}
+      //if (failed_channels==4){
+      //  logfile << "ch= " << i << "\t > 15 points with f=0kHz kHz"<< endl;
+      //}
       if (failed_channels==5){
         logfile << "ch= " << i << "\t All points have f=0kHz"<< endl;
       }
-      if (tthvalue<=1){
+      else if (tthvalue<=1){
         logfile << "ch= " << i << "\t TTH <= 1"<< endl;
       }
-      if (freq_array[tthvalue]>500){
-        logfile << "ch= " << i << "\t Freq(chosen_TTH) is larger than 500 kHz"<< endl;
+      else if (freq_array[tthvalue]>500 || freq_array[tthvalue]==0){
+        logfile << "ch= " << i << "\t Freq(chosen_TTH) is larger than 500 kHz or 0 kHz"<< endl;
       }
-      if (lim2.at(i)<=lim1.at(i)+4){
-        logfile << "ch= " << i << "\t Fault of method: check channel!"<< endl;
-      }
-      if (tthvalue != int((lim1.at(i)+lim2.at(i))/2)){
+      //if (lim2.at(i)<=lim1.at(i)+4){
+      //  logfile << "ch= " << i << "\t Fault of method: check channel!"<< endl;
+      //}
+      else if (tthvalue != int((lim1.at(i)+lim2.at(i))/2)){
         logfile << "ch= " << i << "\t Wrong tth! "<< lim1.at(i) << " " << lim2.at(i) << " " << tthvalue << endl;
       }
-      else if( (freq_array[lim1.at(i)] > 1000 && freq_array[lim2.at(i)] < 200) || (abs(freq_array[lim1.at(i)]-freq_array[lim2.at(i)]) > 800)){
-        logfile << "ch= " << i << "\t Check channel!"<< endl;
-      }
+      //else if( (freq_array[lim1.at(i)] > 1000 && freq_array[lim2.at(i)] < 200) || (abs(freq_array[lim1.at(i)]-freq_array[lim2.at(i)]) > 800)){
+      //  logfile << "ch= " << i << "\t Check channel!"<< endl;
+      //}
 
 
 
