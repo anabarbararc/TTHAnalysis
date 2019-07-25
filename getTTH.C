@@ -2,18 +2,21 @@
 
 int getTTH(string board)
 {
+  // new path to save directly in config directory
+  string path = "/srv/nfs/rootfs/root/fpga_app/config/Board" + board;
 
-  string rootfilename = "Data_TTH/daq_board_" + board + "/freq_vs_tth.root";
   // root file with the plt freq vs tth for all channels and stic
+  string rootfilename = path + "/freq_vs_tth.root";
   TFile *f = new TFile(rootfilename.c_str(),"recreate");
 
   // loop in the stics
   for (int stic=0; stic<8; stic++){
     cout << "Getting TTH of channels on STiC" << stic << endl;
 
-    string infilename = "Data_TTH/daq_board_" + board + "/tth_scan/stic_" + to_string(stic) + ".txt";
+    string infilename = path + "/tth_scan/stic_" + to_string(stic) + ".txt";
 
     // cmd to apply a space btw = sign and numbers in the sticx.txt files
+    // this makes them readable
     string cmd = "sed -i -e 's/=/= /g' " + infilename;
     system(cmd.c_str());
 
@@ -21,16 +24,17 @@ int getTTH(string board)
     ifstream file(infilename.c_str(), ios::in );
 
     // set path
-    string path =  "Data_TTH/daq_board_" + board;
     string create_tthdir = "mkdir -p " + path + "/tth";
     string create_faileddir = "mkdir -p " + path + "/failed";
+    
     // set output file in tth directory
     system(create_tthdir.c_str());
     string outfilename = path + "/tth/stic_" + to_string(stic) + ".txt";
     ofstream outfile(outfilename.c_str(), ios::out );
+    
     // set log files
     system(create_faileddir.c_str());
-    string logfilename = path + "/failed/stic_" + to_string(stic) + ".log";
+    string logfilename = path + "/tth_failed/stic_" + to_string(stic) + ".log";
     ofstream logfile(logfilename.c_str(), ios::out );
 
     // auxiliar parameters
