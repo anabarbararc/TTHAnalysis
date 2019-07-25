@@ -11,6 +11,7 @@
 # ignore compiled source #
 *.o
 *.so
+*.d
 
 # ignore yml
 *.yml
