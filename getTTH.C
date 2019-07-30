@@ -13,7 +13,7 @@ int getTTH(string board){
 
   // loop in the stics
   for (int stic=0; stic<8; stic++){
-    cout << "Getting TTH of channels on STiC" << stic << endl;
+    cout << "\e[1mGetting TTH of channels on STiC" << std::to_string(stic) << "\e[0m" << endl;
 
     string infilename = path + "/tth_scan/stic_" + to_string(stic) + ".txt";
 
@@ -111,9 +111,9 @@ int getTTH(string board){
       
       // setting limits to determine TTH
       // case low frequency
-      if(failed_channels==1 || failed_channels==2){
-          limit1 = FindLimit1_low(freq_array);
-          limit2 = FindLimit2_low(freq_array);
+      if(failed_channels==1 || failed_channels==2 || failed_channels ==6){
+          limit1 = FindLimit1_outWindow(freq_array);
+          limit2 = FindLimit2_outWindow(freq_array,limit1);
       }
       //else
       else{
@@ -128,7 +128,8 @@ int getTTH(string board){
       chosen_tth.push_back(tthvalue);
 
       // debug
-      if (limit1==0) cout << "ch= " << i << "\t failed= " << failed_channels <<endl; 
+      if (i<10) cout << "ch = " << std::to_string(i) << "\t failed= " << failed_channels <<endl; 
+      if (i<10) cout << "limit1 = " << std::to_string(limit1) << "\t limit2= " << std::to_string(limit2) <<endl; 
 
       // writing in tth file
       outfile << "ch= " << i << "\t tth= " << tthvalue << endl;
@@ -178,8 +179,10 @@ int getTTH(string board){
       line->SetLineColor(kRed);
       line->SetLineWidth(4);
       line1->SetLineColor(kBlue);
+      line1->SetLineStyle(kDashed);
       line1->SetLineWidth(4);
-      line2->SetLineColor(kBlue);
+      line2->SetLineColor(kGreen);
+      line2->SetLineStyle(kDashed);
       line2->SetLineWidth(4);
       line->Draw("same");
       line1->Draw("same");

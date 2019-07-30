@@ -4,7 +4,9 @@
 const double freq_high = 110; 
 const double freq_low  = 10;
 
+///////////////////////////////////////////////////////////////////////////////
 // Find TTH function
+///////////////////////////////////////////////////////////////////////////////
 int FindTTH (double tth[], int limit1, int limit2){
 
   int chosen_index=0;
@@ -13,7 +15,46 @@ int FindTTH (double tth[], int limit1, int limit2){
   return tth[chosen_index];
 }
 
-// Function to find maximum for frequency lower than freq_high
+///////////////////////////////////////////////////////////////////////////////
+// Check for failed channels
+// change this function! I need a fancy one that returns all types of failed channels
+///////////////////////////////////////////////////////////////////////////////
+int check_failed_channels(double freq[]) {
+  // 1 = failed low freq (all points < 80 kHz)
+  // 2 = failed low freq (at least 25 points < 10 kHz)
+  // 3 = failed high freq (at least 15 points > 500 kHz)
+  // 4 = dead TTH (all points f=0KHz)
+  // 5 = might be TTH dead (5 points or less f>0KHz)
+  int low_freq=0;
+  int low_freq2=0;
+  int high_freq=0;
+  int high_freq2=0;
+  int zero_freq=0;
+  int failed=0;
+
+  int chosen_index;
+
+  for (int i=0;i<32;i++){
+    if (freq[i]<80) low_freq++;
+    if (freq[i]<10) low_freq2++;
+    if (freq[i]>500) high_freq++;
+    if (freq[i]>100) high_freq2++;
+    if (freq[i]==0) zero_freq++;
+  }
+
+  if (low_freq>=31)  failed = 1;
+  if (low_freq2>=25) failed = 2;
+  if (high_freq>=15) failed = 3;
+  if (high_freq2>=0 && low_freq==0) failed = 6;
+  if (zero_freq>30)  failed = 4;
+  else if (zero_freq>=25)  failed = 5;
+
+  return failed;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Function to find limit1 for frequencies lower than freq_high
+///////////////////////////////////////////////////////////////////////////////
 int FindLimit1(double freq[], double tth[], int n, int failed_channels) {
   int index=0;
   int aux=0;
@@ -54,89 +95,9 @@ int FindLimit1(double freq[], double tth[], int n, int failed_channels) {
   return tth[index];
 }
 
-// Check for failed channels
-int check_failed_channels(double freq[]) {
-  // 1 = failed low freq (all points < 80 kHz)
-  // 2 = failed low freq (at least 25 points < 10 kHz)
-  // 3 = failed high freq (at least 15 points > 500 kHz)
-  // 4 = dead TTH (all points f=0KHz)
-  // 5 = might be TTH dead (5 points or less f>0KHz)
-  int low_freq=0;
-  int low_freq2=0;
-  int high_freq=0;
-  int zero_freq=0;
-  int failed=0;
-
-  int chosen_index;
-
-  for (int i=0;i<32;i++){
-    if (freq[i]<80) low_freq++;
-    if (freq[i]<10) low_freq2++;
-    if (freq[i]>500) high_freq++;
-    if (freq[i]==0) zero_freq++;
-  }
-
-  if (low_freq>=31)  failed =1;
-  if (low_freq2>=25) failed = 2;
-  if (high_freq>=15) failed = 3;
-  if (zero_freq>30)  failed = 4;
-  else if (zero_freq>=25)  failed = 5;
-
-  return failed;
-}
-
-// Check for channels with high frequency
-bool check_highfreq(TGraph *g) {
-
-  double freq[32];
-  double tth[32];
-  int high_freq=0;
-  bool HasHighFreq;
-  int chosen_index;
-
-  // filling up array with freq and tth values
-  for (int i=0;i<32;i++)
-    g->GetPoint(i,tth[i],freq[i]);
-
-  for (int i=0;i<32;i++){
-    if (freq[i]>500) high_freq++;
-    else continue;
-  }
-  if (high_freq>=15) HasHighFreq=true;
-  else HasHighFreq=false;
-
-  return HasHighFreq;
-}
-
-// Find limit1 function in case low frequency
-int FindLimit1_low (double freq[]){
-
-  int chosen_index;
-  int limit1=0;
-
-  for (int i=0;i<32;i++){
-      if(freq[i]>10){
-          limit1 =i; 
-          break;
-      }
-  }
-  return limit1;
-}
-// Find limit2 function in case low frequency
-int FindLimit2_low (double freq[]){
-
-  int limit2=0;
-
-  for (int i=31;i>=1;--i){
-      if(freq[i]>10 && freq[i-1]>10){
-          limit2 = i; 
-          break;
-      }
-  }
-  return limit2;
-}
-
+///////////////////////////////////////////////////////////////////////////////
 // Find limit2 function
+///////////////////////////////////////////////////////////////////////////////
 int FindLimit2 (double freq[], int limit1){
 
   int chosen_index=0;
@@ -153,6 +114,49 @@ int FindLimit2 (double freq[], int limit1){
     if(p1->GetParameter(1) < -2 && freq[i]>10)
       limit2 = i;
   }
+  if (limit2<limit1) limit2=limit1;
 
+  return limit2;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Find limit1 function in case low frequency or only f > 100 kHz
+///////////////////////////////////////////////////////////////////////////////
+int FindLimit1_outWindow (double freq[]){
+
+  int chosen_index;
+  int limit1=0;
+
+  for (int i=0;i<32;i++){
+      if(freq[i]>10){
+          limit1 =i; 
+          break;
+      }
+  }
+  if (limit1==0){
+      for (int i=0;i<32;i++){
+          if(freq[i]>0){
+              limit1 =i; 
+              break;
+          }
+      }
+  }
+  return limit1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Find limit2 function in case low frequency or only f > 100 kHz
+///////////////////////////////////////////////////////////////////////////////
+int FindLimit2_outWindow (double freq[], int limit1){
+
+    int limit2=0;
+
+    for (int i=31;i>=1;--i){
+        if(freq[i]>10 && freq[i-1]>10){
+            limit2 = i; 
+            break;
+        }
+    }
+  if (limit2<limit1) limit2=limit1;
   return limit2;
 }

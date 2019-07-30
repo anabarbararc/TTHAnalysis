@@ -35,7 +35,7 @@ int FindLimit2 (double arr[], int lim1);
 int getTTH(string board);
 
 // find limit on the left edge
-int FindLimit1_low (double arr[]);
+int FindLimit1_outWindow (double arr[]);
 
 // find limit on the right edge
-int FindLimit2_low (double arr[]);
+int FindLimit2_outWindow (double arr[], int lim1);
