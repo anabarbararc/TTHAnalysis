@@ -3,14 +3,6 @@ Threshold analysis alternative code.
 
 Examples are considering board number 01.
 
-## Add files
-
-Create a directory Data_TTH/daq_board_01
-``` 
-cp Data_TTH/daq_board_01
-```
-Copy tth_scan data to directory Data_TTH/daq_board_01/tth_scan
-
 ## How to run
 
 ``` 
@@ -19,11 +11,11 @@ source runTTHAnalysis.sh 01
 
 ## Files created
 
-* Find log files at: Data_TTH/daq_board_01/failed
+* Find log files at: /srv/nfs/rootfs/root/fpga_app/config/Board01/tth_failed
 
-* Find tth files at: Data_TTH/daq_board_01/tth
+* Find tth files at: /srv/nfs/rootfs/root/fpga_app/config/Board01/tth
 
-* Find root file at: Data_TTH/daq_board_01/freq_vs_tth.root
+* Find root file at: /srv/nfs/rootfs/root/fpga_app/config/Board01/freq_vs_tth.root
 
 ### Log files
 

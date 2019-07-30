@@ -30,11 +30,13 @@ int FindLimit1(double freq[], double tth[], int n, int failed_channels) {
     }
     else continue;
   }
-  max=0;
+  //max=0;
   for (int i = aux ; i < n; i++) {
-    if (freq[i]<freq_high && freq[i] > max) {
+    //if (freq[i]<freq_high && freq[i] > max) {
+    if (freq[i]<freq_high) {
       index = i;
       max = freq[i];
+      break;
     }
     else continue;
   }
@@ -54,12 +56,11 @@ int FindLimit1(double freq[], double tth[], int n, int failed_channels) {
 
 // Check for failed channels
 int check_failed_channels(double freq[]) {
-  // 0 = perfect
-  // 1 = failed low freq
-  // 2 = failed low freq + at least 1 point has f=0kHz
-  // 3 = failed high freq
-  // 4 = failed more than 15 points with f=0kHz
-  // 5 = failed all points with f=0KHz
+  // 1 = failed low freq (all points < 80 kHz)
+  // 2 = failed low freq (at least 25 points < 10 kHz)
+  // 3 = failed high freq (at least 15 points > 500 kHz)
+  // 4 = dead TTH (all points f=0KHz)
+  // 5 = might be TTH dead (5 points or less f>0KHz)
   int low_freq=0;
   int low_freq2=0;
   int high_freq=0;
@@ -75,11 +76,11 @@ int check_failed_channels(double freq[]) {
     if (freq[i]==0) zero_freq++;
   }
 
-  if (low_freq>=31) failed =1;
-  //if (low_freq2>=25) failed = 2;
-  if (high_freq>15) failed = 3;
-  //if (zero_freq>=15) failed = 4; 
-  if (zero_freq>30) failed = 5;
+  if (low_freq>=31)  failed =1;
+  if (low_freq2>=25) failed = 2;
+  if (high_freq>=15) failed = 3;
+  if (zero_freq>30)  failed = 4;
+  else if (zero_freq>=25)  failed = 5;
 
   return failed;
 }
@@ -149,8 +150,8 @@ int FindLimit2 (double freq[], int limit1){
     g_test->SetPoint(2,i+2,freq[i+2]);
     g_test->SetPoint(3,i+3,freq[i+3]);
     g_test->Fit(p1,"QR+");
-    if(p1->GetParameter(1) < -2)
-      limit2 = i-1;
+    if(p1->GetParameter(1) < -2 && freq[i]>10)
+      limit2 = i;
   }
 
   return limit2;

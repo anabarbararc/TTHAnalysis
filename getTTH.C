@@ -3,8 +3,9 @@
 int getTTH(string board){
 
   // new path to save directly in config directory
-  //string path = "/srv/nfs/rootfs/root/fpga_app/config/Board" + board;
-  string path = "Data_TTH/daq_board_" + board;
+  string path = "/srv/nfs/rootfs/root/fpga_app/config/Board" + board;
+  // path to run 'locally'
+  //string path = "Data_TTH/daq_board_" + board;
 
   // root file with the plt freq vs tth for all channels and stic
   string rootfilename = path + "/freq_vs_tth.root";
@@ -14,7 +15,7 @@ int getTTH(string board){
   for (int stic=0; stic<8; stic++){
     cout << "Getting TTH of channels on STiC" << stic << endl;
 
-    string infilename = path + "/tth_scan_v1/stic_" + to_string(stic) + ".txt";
+    string infilename = path + "/tth_scan/stic_" + to_string(stic) + ".txt";
 
     // cmd to apply a space btw = sign and numbers in the sticx.txt files
     // this makes them readable
@@ -22,13 +23,13 @@ int getTTH(string board){
     int systemcmd1 = system(cmd.c_str());
 
     // set input file
-    ifstream file(infilename.c_str(), ios::in );
+    ifstream infile(infilename.c_str(), ios::in );
 
-    // set path
+    // create tth and tth_failed directories
     string create_tthdir = "mkdir -p " + path + "/tth";
     string create_faileddir = "mkdir -p " + path + "/tth_failed";
     
-    // set output file in tth directory
+    // set output files in tth directory
     int systemcmd2 = system(create_tthdir.c_str());
     string outfilename = path + "/tth/stic_" + to_string(stic) + ".txt";
     ofstream outfile(outfilename.c_str(), ios::out );
@@ -49,6 +50,7 @@ int getTTH(string board){
       cout << "cmd: " << create_faileddir << " FAILED." << endl; 
 
     }
+
     // auxiliar parameters
     char aux1[4];
     char aux2[5];
@@ -64,10 +66,10 @@ int getTTH(string board){
     vector <int>lim1;
     vector <int>lim2;
 
-    // check if file exists
-    if( !file )
-      cerr << "Cant open file! " << endl;
-    while(file >> aux1  >> ch >> aux2 >> tth >> aux2  >> freq){
+    // check if input file exists
+    if( !infile )
+      cerr << "Input file: " << infilename << " does not exist!" << endl;
+    while(infile >> aux1  >> ch >> aux2 >> tth >> aux2  >> freq){
       data[ch][tth] = freq;
     }
 
@@ -99,20 +101,23 @@ int getTTH(string board){
       g[i].Draw("ALP");
       g_copy=&g[i];
 
-      //lim2.push_back(FindLimit2(g_copy));
-
-      outfile << "ch= " << i << "\t tth= " << tthvalue << endl;
-
-      // check for failed channels
+      // cathegorize failed channels
       failed_channels = check_failed_channels(freq_array);
-
+      // 1 = failed low freq (all points < 80 kHz)
+      // 2 = failed low freq (at least 25 points < 10 kHz)
+      // 3 = failed high freq (at least 15 points > 500 kHz)
+      // 4 = TTH dead (all points f=0KHz)
+      // 5 = might be TTH dead (5 points or less f>0KHz)
+      
+      // setting limits to determine TTH
+      // case low frequency
       if(failed_channels==1 || failed_channels==2){
           limit1 = FindLimit1_low(freq_array);
           limit2 = FindLimit2_low(freq_array);
       }
+      //else
       else{
           limit1 = FindLimit1(freq_array,tth_array,31,failed_channels);
-          //limit1 = FindLimit1(freq_array);
           limit2 = FindLimit2(freq_array,limit1);
       }
       lim1.push_back(limit1);
@@ -122,46 +127,33 @@ int getTTH(string board){
       tthvalue = FindTTH(tth_array,limit1,limit2);
       chosen_tth.push_back(tthvalue);
 
-      //if (limit1==0){
-      //  logfile << "ch= " << i << "\t Limit left edge = 0! Check channel!"<< endl;
-      //}
-      //if (failed_channels==1){
-      //  logfile << "ch= " << i << "\t Frequencies lower than 80 kHz"<< endl;
-      //}
-      //if (failed_channels==2){
-      //  logfile << "ch= " << i << "\t Frequencies lower than 10 kHz"<< endl;
-      //}
-      //if (failed_channels==3){
-      //  logfile << "ch= " << i << "\t Frequencies higher than 500 kHz"<< endl;
-      //}
-      //if (failed_channels==4){
-      //  logfile << "ch= " << i << "\t > 15 points with f=0kHz kHz"<< endl;
-      //}
-      if (failed_channels==5){
-        logfile << "ch= " << i << "\t All points have f=0kHz"<< endl;
+      // debug
+      if (limit1==0) cout << "ch= " << i << "\t failed= " << failed_channels <<endl; 
+
+      // writing in tth file
+      outfile << "ch= " << i << "\t tth= " << tthvalue << endl;
+
+      // writing in log file
+      if (failed_channels==4){
+        logfile << "ch= " << i << "\t TTH dead (all points have f=0kHz)"<< endl;
       }
-      else if (tthvalue<=1){
-        logfile << "ch= " << i << "\t TTH <= 1"<< endl;
+      else if (freq_array[tthvalue]<=10){
+        logfile << "ch= " << i << "\t Freq @ chosen TTH <= 10 kHz"<< endl;
       }
       else if (freq_array[tthvalue]>500 || freq_array[tthvalue]==0){
         logfile << "ch= " << i << "\t Freq(chosen_TTH) is larger than 500 kHz or 0 kHz"<< endl;
       }
-      //if (lim2.at(i)<=lim1.at(i)+4){
-      //  logfile << "ch= " << i << "\t Fault of method: check channel!"<< endl;
-      //}
       else if (tthvalue != int((lim1.at(i)+lim2.at(i))/2)){
         logfile << "ch= " << i << "\t Wrong tth! "<< lim1.at(i) << " " << lim2.at(i) << " " << tthvalue << endl;
       }
-      //else if( (freq_array[lim1.at(i)] > 1000 && freq_array[lim2.at(i)] < 200) || (abs(freq_array[lim1.at(i)]-freq_array[lim2.at(i)]) > 800)){
-      //  logfile << "ch= " << i << "\t Check channel!"<< endl;
-      //}
-
-
+      else if (failed_channels==5 && limit2==0 ){
+        logfile << "ch= " << i << "\t Might be TTH dead (up to 6 points have f>0kHz)"<< endl;
+      }
 
     }
     outfile.close();
 
-    // canvas for every channel
+    // set canvas for every channel
     TCanvas* c[64] ;
     std::string graphicName;
     string print_tth;
@@ -176,9 +168,10 @@ int getTTH(string board){
       g[i].GetXaxis()->SetTitle("TTH");
       g[i].SetMarkerStyle(4);
       g[i].Draw("ACP");
-      // set range for drawing line
+      // set position for the line which set limits
       Float_t ymin = g[i].GetHistogram()->GetMinimum();
       Float_t ymax = g[i].GetHistogram()->GetMaximum();
+      // Drawing lines
       TLine *line = new TLine(chosen_tth.at(i),ymin,chosen_tth.at(i),ymax);
       TLine *line1 = new TLine(lim1.at(i),ymin,lim1.at(i),ymax);
       TLine *line2 = new TLine(lim2.at(i),ymin,lim2.at(i),ymax);
@@ -199,11 +192,11 @@ int getTTH(string board){
       text->Draw();
       // save canvas
       c[i]->Modified();
-      c[i]->SetLogy() ;
+      c[i]->SetLogy();
       c[i]->Modified();
       c[i]->Write();
     }
-    file.close();
+    infile.close();
   }
 
   return 0;
