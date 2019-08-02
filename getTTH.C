@@ -57,7 +57,6 @@ int getTTH(string board){
     char aux3[6];
     int ch, tth;
     double freq;
-    int failed_channels=0;
 
     double data[64][32]={0};
     int tthvalue;
@@ -91,8 +90,6 @@ int getTTH(string board){
     // loop in the channels
     for (int i=0; i<64; i++){
 
-      failed_channels=0;
-
       for (int j=0; j<32; j++){
         g[i].SetPoint(j,j,data[i][j]);
         tth_array[j]=j;
@@ -102,23 +99,27 @@ int getTTH(string board){
       g_copy=&g[i];
 
       // cathegorize failed channels
-      failed_channels = check_failed_channels(freq_array);
-      // 1 = failed low freq (all points < 80 kHz)
-      // 2 = failed low freq (at least 25 points < 10 kHz)
-      // 3 = failed high freq (at least 15 points > 500 kHz)
-      // 4 = TTH dead (all points f=0KHz)
-      // 5 = might be TTH dead (5 points or less f>0KHz)
+      vector <bool> failed_channels = check_failed_channels(freq_array);
+      // [0] = failed low freq (all points < 80 kHz)
+      // [1] = failed low freq (at least 25 points < 10 kHz)
+      // [2] = failed high freq (at least 15 points > 500 kHz)
+      // [3] = TTH dead (all points f=0KHz)
+      // [4] = might be TTH dead (5 points or less f>0KHz)
+      // [5] = might be TTH dead (5 points or less f>0KHz)
       
       // setting limits to determine TTH
       // case low frequency
-      if(failed_channels==1 || failed_channels==2 || failed_channels ==6){
+      if((failed_channels.at(0)==1 || failed_channels.at(1)==1) && failed_channels.at(5)==0 ){
           limit1 = FindLimit1_outWindow(freq_array);
           limit2 = FindLimit2_outWindow(freq_array,limit1);
+          if (i<10) cout << "out of window" <<endl; 
       }
-      //else
-      else{
-          limit1 = FindLimit1(freq_array,tth_array,31,failed_channels);
+      else {
+          limit1 = FindLimit1(freq_array,tth_array,31,0);
           limit2 = FindLimit2(freq_array,limit1);
+         
+          if(limit1==limit2) limit1 = FindLimit1(freq_array,tth_array,31,1);
+          if (i<10) cout << "normal" <<endl; 
       }
       lim1.push_back(limit1);
       lim2.push_back(limit2);
@@ -126,16 +127,20 @@ int getTTH(string board){
       // get tth values
       tthvalue = FindTTH(tth_array,limit1,limit2);
       chosen_tth.push_back(tthvalue);
-
+        
+      //========================================================================================================  
       // debug
-      if (i<10) cout << "ch = " << std::to_string(i) << "\t failed= " << failed_channels <<endl; 
-      if (i<10) cout << "limit1 = " << std::to_string(limit1) << "\t limit2= " << std::to_string(limit2) <<endl; 
+      if (i<10 || i==17){ cout << "ch = " << std::to_string(i) << "\t failed= ";
+          for (int l=0; l<6; l++) cout << failed_channels.at(l) << " "; 
+      }
+      if (i<10 || i==17) cout << "\nlimit1 = " << std::to_string(limit1) << "\t limit2= " << std::to_string(limit2) <<endl; 
+      //========================================================================================================  
 
       // writing in tth file
       outfile << "ch= " << i << "\t tth= " << tthvalue << endl;
 
       // writing in log file
-      if (failed_channels==4){
+      if (failed_channels.at(5)==1){
         logfile << "ch= " << i << "\t TTH dead (all points have f=0kHz)"<< endl;
       }
       else if (freq_array[tthvalue]<=10){
@@ -147,10 +152,9 @@ int getTTH(string board){
       else if (tthvalue != int((lim1.at(i)+lim2.at(i))/2)){
         logfile << "ch= " << i << "\t Wrong tth! "<< lim1.at(i) << " " << lim2.at(i) << " " << tthvalue << endl;
       }
-      else if (failed_channels==5 && limit2==0 ){
+      else if (failed_channels.at(4)==1 && limit2==0 ){
         logfile << "ch= " << i << "\t Might be TTH dead (up to 6 points have f>0kHz)"<< endl;
       }
-
     }
     outfile.close();
 

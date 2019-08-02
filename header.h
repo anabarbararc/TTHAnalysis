@@ -20,13 +20,10 @@ int FindTTH (double arr[], int lim1, int lim2);
 int find_maximum(double arr[], int n, int failed_channels);
 
 // check for failed channels
-int check_failed_channels(double arr[]);
-
-// check if more than 15 channels have High Frequency (>500kHz)
-bool check_highfreq(TGraph *g);
+vector <bool> check_failed_channels(double arr[]);
 
 // find limit on the left edge
-int FindLimit1(double arr[], double arr1[], int n, int failed_channels);
+int FindLimit1(double arr[], double arr1[], int n, bool refine);
 
 // find limit on the right edge
 int FindLimit2 (double arr[], int lim1);
